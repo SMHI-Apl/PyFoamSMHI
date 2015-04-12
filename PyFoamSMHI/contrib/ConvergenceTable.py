@@ -40,14 +40,14 @@ class ConvergenceTable:
                     pf.close()
                 except:
                     print "Could not read probe file"
-                    sys.exit("Could not read probe file")     
+                    sys.exit("Could not read probe file")
                 nprobes=len(lines[0].split()[2:])
 
                 for pInd in range(nprobes):
                     probeCoordinates=""
                     probeCoordinates+=lines[0].split()[pInd+2]+"_"
                     probeCoordinates+=lines[1].split()[pInd+2]+"_"
-                    probeCoordinates+=lines[2].split()[pInd+2]        
+                    probeCoordinates+=lines[2].split()[pInd+2]
                     record=[]
                     for line in lines[4:len(lines)]:
                         if '(' in line:
@@ -63,10 +63,9 @@ class ConvergenceTable:
                         else:
                             line=line.split()
                             data=float(line[1+pInd])
-                        record.append(data)                        
+                        record.append(data)
                     records[probeCoordinates]=record
-        
-        
+
         for probe in records.keys():
             key=fieldName+"_"+probe
             if key in self.probes:
@@ -75,8 +74,7 @@ class ConvergenceTable:
                 fieldProbeDict={}
             fieldProbeDict[runId]=records[probe]
             self.probes[key]=fieldProbeDict
-    
-    
+
     def addResidual(self,runId,solverName,fieldName,runIndex):
         runId=str(runIndex)+"_"+runId
         residualFile=os.path.join(self.caseDir,solverName+".analyzed",fieldName)
@@ -87,15 +85,14 @@ class ConvergenceTable:
                 pf.close()
             except:
                 print "Could not read residual file"
-                sys.exit("Could not read residual file")     
-        
+                sys.exit("Could not read residual file")
+
             record=[]
             for line in lines[1:len(lines)]:
                 line=line.split('\t')
                 data=float(line[1])
                 record.append(data)
-        
-        
+
             key=fieldName+"_"+solverName
             if key in self.residuals:
                 fieldSolverDict=self.residuals[key]
@@ -103,7 +100,7 @@ class ConvergenceTable:
                 fieldSolverDict={}
             fieldSolverDict[runId]=record
             self.residuals[key]=fieldSolverDict
-        
+
     def writeProbes(self):
         for key in self.probes.keys():
             #Creating a list of runs sorted by run index
@@ -112,23 +109,23 @@ class ConvergenceTable:
                 sortList.append(int(runId.split("_")[0]))
             sortList.sort()
             runKeys=[]
-            for post in sortList:     
+            for post in sortList:
                 for runId in self.probes[key].keys():
                     if int(runId.split("_")[0])==post:
                         runKeys.append(runId)
-            
+
             #Opening a output file specifik for field and probe
             fileName=os.path.join(self.resDir,key+"_probe.asc")
             try:
                 fid=open(fileName,'w')
                 fid.write("Time\t")
                 for run in runKeys[:-1]:
-                    fid.write(run+"\t")  
+                    fid.write(run+"\t")
                 fid.write(runKeys[-1]+"\n")
             except:
                 print "Could not write probe table"
-                sys.exit("Could not write probe table") 
-                
+                sys.exit("Could not write probe table")
+
             data=[]
             nrows=0
             time=1
@@ -150,7 +147,7 @@ class ConvergenceTable:
                 else:
                     fid.write("\n")
             fid.close()
-            
+
     def writeResiduals(self):
         for key in self.residuals.keys():
             #Creating a list of runs sorted by run index
@@ -159,11 +156,11 @@ class ConvergenceTable:
                 sortList.append(int(runId.split("_")[0]))
             sortList.sort()
             runKeys=[]
-            for post in sortList:     
+            for post in sortList:
                 for runId in self.residuals[key].keys():
                     if int(runId.split("_")[0])==post:
                         runKeys.append(runId)
-            
+
             #Opening a output file specifik for field and solver
             fileName=os.path.join(self.resDir,key+"_residual.asc")
             try:
@@ -174,8 +171,8 @@ class ConvergenceTable:
                 fid.write(runKeys[-1]+"\n")
             except:
                 print "Could not write residual table"
-                sys.exit("Could not write residual table") 
-                
+                sys.exit("Could not write residual table")
+
             data=[]
             nrows=0
             time=1
@@ -197,6 +194,3 @@ class ConvergenceTable:
                 else:
                     fid.write("\n")
             fid.close()
-                      
-            
-            

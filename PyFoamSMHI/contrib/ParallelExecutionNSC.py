@@ -22,20 +22,20 @@ class LAMMachine(Utilities):
 
         if machines=="":
             machines=None
-            
+
         if machines==None and foamMPI()=="LAM":
             error("Machinefile must be specified for LAM")
 
         if machines==None and nr==None:
             error("Either machinefile or Nr of CPUs must be specified for MPI type",foamMPI())
-            
+
         self.mFile=machines
         self.procNr=nr
-        
+
         self.boot()
         if not self.machineOK():
             error("Error: LAM was not started")
-            
+
     def machineOK(self):
         """Check whether the LAM machine was properly booted"""
         if self.running:
@@ -50,7 +50,7 @@ class LAMMachine(Utilities):
         self.running=False
         if(foamMPI()=="LAM"):
             self.execute("lamhalt -v")
-        
+
     def boot(self):
         """Boots a LAM-machine using the machine-file"""
         if foamMPI()=="LAM":
@@ -61,7 +61,7 @@ class LAMMachine(Utilities):
             self.running=True
         else:
             error(" Unknown or missing MPI-Implementation: "+foamMPI())
-            
+
     def cpuNr(self):
         if(foamMPI()=="LAM"):
             if self.running:
@@ -80,7 +80,7 @@ class LAMMachine(Utilities):
     def buildMPIrun(self,argv,expandApplication=True):
         """Builds a list with a working mpirun command (for that MPI-Implementation)
         @param argv: the original arguments that are to be wrapped
-        @param expandApplication: Expand the 
+        @param expandApplication: Expand the
         @return: list with the correct mpirun-command"""
 
         nr=str(self.cpuNr())
@@ -104,7 +104,7 @@ class LAMMachine(Utilities):
                 warning("which can not find a match for",progname,". Hoping for the best")
 
         mpirun+=[progname]+argv[1:3]+["-parallel"]+argv[3:]
-        
+
         if config().getdebug("ParallelExecution"):
             debug("MPI:",foamMPI())
             debug("Arguments:",mpirun)
@@ -114,9 +114,9 @@ class LAMMachine(Utilities):
             for a in mpirun:
                 if a in environ:
                     debug("Transfering variable",a,"with value",environ[a])
-            
+
         return mpirun
-    
+
     def writeMetis(self,sDir):
         """Write the parameter-File for a metis decomposition
         @param sDir: Solution directory
@@ -134,7 +134,7 @@ class LAMMachine(Utilities):
         params="method scotch;\n"
 
         self.writeDecomposition(sDir,params)
-        
+
     def writeSimple(self,sDir,direction):
         """Write the parameter-File for a metis decomposition
         @param sDir: Solution directory
@@ -156,7 +156,7 @@ class LAMMachine(Utilities):
         else:
             params+="1"
         params+=");\n\t delta \t 0.001;\n}\n"
-        
+
         self.writeDecomposition(sDir,params)
 
     def writeDecomposition(self,sDir,par):
