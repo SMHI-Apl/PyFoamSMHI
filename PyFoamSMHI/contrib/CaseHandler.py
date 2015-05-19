@@ -1,85 +1,101 @@
-import sys, re, os, logging
+import sys
+import re
+import os
+import logging
 from os import path, popen4
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from PyFoam.RunDictionary.ParameterFile import ParameterFile
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
-import pdb
+
 
 class CaseHandler(SolutionDirectory):
 
     def __init__(self, dirPath):
-        self.logger=logging.getLogger('BcModifier')
-        self.machinesFile=None
-        SolutionDirectory.__init__(self,dirPath)
+        self.logger = logging.getLogger('BcModifier')
+        self.machinesFile = None
+        SolutionDirectory.__init__(self, dirPath)
 
-    def clearResults(self,after=None,before=None):
+    def clearResults(self, after=None, before=None):
         """remove all time-directories after/before a certain time. If no time is
         set all times except the initial time are removed"""
         self.reread()
 
-        if before==None:
-            mintime=float(self.first)
+        if before is None:
+            mintime = float(self.first)
         else:
-            mintime=float(before)
+            mintime = float(before)
 
-        if after==None:
-            maxtime=float(self.first)
+        if after is None:
+            maxtime = float(self.first)
         else:
-            maxtime=float(after)
+            maxtime = float(after)
 
         for f in self.times:
-            if float(f)<mintime or float(f)>maxtime:
-                self.execute("rm -r "+path.join(self.name,f))
+            if float(f) < mintime or float(f) > maxtime:
+                self.execute("rm -r " + path.join(self.name, f))
 
         self.reread()
 
-
-    def execute(self,cmd):
+    def execute(self, cmd):
         """Execute the command cmd
         Currently no error-handling is done
         @return: A list with all the output-lines of the execution"""
-        rein, raus=popen4(cmd)
-        tmp=raus.readlines()
+        rein, raus = popen4(cmd)
+        tmp = raus.readlines()
         return tmp
 
     def backUpInitialFields(self):
-        bgPath=path.join(self.name,"backUpInitialFields")
+        bgPath = path.join(self.name, "backUpInitialFields")
         if not path.exists(bgPath):
             os.mkdir(bgPath)
-        self.execute("cp "+path.join(self.initialDir(),"*[^.ba]")+" "+bgPath+"/")
-        #self.execute("cp "+path.join(case.constantDir(),"polyMesh","boundary")+" "+bgPath+"/")
+        self.execute(
+            "cp " +
+            path.join(self.initialDir(), "*[^.ba]") +
+            " " + bgPath + "/"
+        )
 
     def restoreInitialFields(self):
-        bgPath=path.join(self.name,"backUpInitialFields")
+        bgPath = path.join(self.name, "backUpInitialFields")
         if not os.path.exists(bgPath):
-            logger.error("Cannot restore initial fields, backup directory does not exist")
-            sys.exit()
+            print(
+                "Cannot restore initial fields, " +
+                "backup directory does not exist"
+            )
+            sys.exit(1)
         else:
             try:
-                #self.execute("rm -r "+self.initialDir())
+                # self.execute("rm -r "+self.initialDir())
                 if not os.path.exists(self.initialDir()):
                     self.execute("mkdir "+self.initialDir())
-                self.execute("cp "+path.join(bgPath,"*")+" "+self.initialDir()+"/")
+                self.execute(
+                    "cp " + path.join(bgPath, "*") +
+                    " " + self.initialDir() + "/"
+                )
 
-                #self.execute("cp "+path.join(bgPath,"boundary")+" "+path.join(case.constantDir(),"polyMesh","boundary"))
+                # self.execute("cp "+path.join(bgPath,"boundary")+" "+path.join(case.constantDir(),"polyMesh","boundary"))
             except:
-                logger.warning("Warning: could not restore initial fields, continuing anyway")
+                print(
+                    "Warning: could not restore initial fields, skipping"
+                )
 
-    def createMachinesFile(self,serversCPUsDict):
-        machinesPath=path.join(self.name,"machines")
+    def createMachinesFile(self, serversCPUsDict):
+        machinesPath = path.join(self.name, "machines")
         try:
-            fid=open(machinesPath,'w')
+            fid = open(machinesPath, 'w')
             for server in serversCPUsDict.keys():
-                fid.write(server+" cpu="+str(int(serversCPUsDict[server]))+"\n")
+                fid.write(
+                    server + " cpu=" + str(int(serversCPUsDict[server])) + "\n"
+                )
             fid.close()
         except:
-            logger.error("Could not write machines file")
-            sys.exit()
-        self.machinesFile=machinesPath
+            print("Error: could not write machines file")
+            sys.exit(1)
+        self.machinesFile = machinesPath
 
     def getFields(self, time):
-        timePath=path.join(self.name,str(time))
-        fields=os.listdir(timePath)
+        timePath = path.join(self.name, str(time))
+        fields = os.listdir(timePath)
+
         def isGood(f):
             if ".bak" in f:
                 return False
@@ -89,174 +105,235 @@ class CaseHandler(SolutionDirectory):
                 return False
             return True
 
-        fields=[f for f in fields if isGood(f) and path.isfile(path.join(timePath,f))]
+        fields = [
+            f for f in fields if isGood(f) and
+            path.isfile(path.join(timePath, f))
+        ]
         return fields
 
-    def modWindDir(self,time,newDir):
-        boundaryTypes={
-                     'dirNBnorth':'patch','dirNBeast':'zeroGradient','dirNBsouth':'patch','dirNBwest':'zeroGradient',
-                     'dirNEBnorth':'patch','dirNEBeast':'patch','dirNEBsouth':'patch','dirNEBwest':'patch',
-                     'dirEBnorth':'zeroGradient','dirEBeast':'patch','dirEBsouth':'zeroGradient','dirEBwest':'patch',
-                     'dirSEBnorth':'patch','dirSEBeast':'patch','dirSEBsouth':'patch','dirSEBwest':'patch',
-                     'dirSBnorth':'patch','dirSBeast':'zeroGradient','dirSBsouth':'patch','dirSBwest':'zeroGradient',
-                     'dirSWBnorth':'patch','dirSWBeast':'patch','dirSWBsouth':'patch','dirSWBwest':'patch',
-                     'dirWBnorth':'zeroGradient','dirWBeast':'patch','dirWBsouth':'zeroGradient','dirWBwest':'patch',
-                     'dirNWBnorth':'patch','dirNWBeast':'patch','dirNWBsouth':'patch','dirNWBwest':'patch',
-                    }
+    def modWindDir(self, time, newDir):
 
-        boundaryPhysTypes={
-                     'dirNBnorth':'inlet','dirNBeast':'side','dirNBsouth':'outlet','dirNBwest':'side',
-                     'dirNEBnorth':'inlet','dirNEBeast':'inlet','dirNEBsouth':'outlet','dirNEBwest':'outlet',
-                     'dirEBnorth':'side','dirEBeast':'inlet','dirEBsouth':'side','dirEBwest':'outlet',
-                     'dirSEBnorth':'outlet','dirSEBeast':'inlet','dirSEBsouth':'inlet','dirSEBwest':'outlet',
-                     'dirSBnorth':'outlet','dirSBeast':'side','dirSBsouth':'inlet','dirSBwest':'side',
-                     'dirSWBnorth':'outlet','dirSWBeast':'outlet','dirSWBsouth':'inlet','dirSWBwest':'inlet',
-                     'dirWBnorth':'side','dirWBeast':'outlet','dirWBsouth':'side','dirWBwest':'inlet',
-                     'dirNWBnorth':'inlet','dirNWBeast':'outlet','dirNWBsouth':'outlet','dirNWBwest':'inlet',
-                    }
+        boundaryPhysTypes = {
+            'dirNBnorth': 'inlet', 'dirNBeast': 'side',
+            'dirNBsouth': 'outlet', 'dirNBwest': 'side',
+            'dirNEBnorth': 'inlet', 'dirNEBeast': 'inlet',
+            'dirNEBsouth': 'outlet', 'dirNEBwest': 'outlet',
+            'dirEBnorth': 'side', 'dirEBeast': 'inlet',
+            'dirEBsouth': 'side', 'dirEBwest': 'outlet',
+            'dirSEBnorth': 'outlet', 'dirSEBeast': 'inlet',
+            'dirSEBsouth': 'inlet', 'dirSEBwest': 'outlet',
+            'dirSBnorth': 'outlet', 'dirSBeast': 'side',
+            'dirSBsouth': 'inlet', 'dirSBwest': 'side',
+            'dirSWBnorth': 'outlet', 'dirSWBeast': 'outlet',
+            'dirSWBsouth': 'inlet', 'dirSWBwest': 'inlet',
+            'dirWBnorth': 'side', 'dirWBeast': 'outlet',
+            'dirWBsouth': 'side', 'dirWBwest': 'inlet',
+            'dirNWBnorth': 'inlet', 'dirNWBeast': 'outlet',
+            'dirNWBsouth': 'outlet', 'dirNWBwest': 'inlet',
+        }
 
-        dirSymbol="-"
-        if newDir== 0 or newDir == 360:
-            dirSymbol= 'N'
-        if newDir>0 and newDir<90:
-            dirSymbol ='NE'
-        if newDir==90:
-            dirSymbol ='E'
-        if newDir>90 and newDir<180:
-            dirSymbol ='SE'
-        if newDir==180:
-            dirSymbol ='S'
-        if newDir>180 and newDir<270:
-            dirSymbol ='SW'
-        if newDir==270:
-            dirSymbol ='W'
-        if newDir>270 and newDir<360:
-            dirSymbol='NW'
+        dirSymbol = "-"
+        if newDir == 0 or newDir == 360:
+            dirSymbol = 'N'
+        elif newDir > 0 and newDir < 90:
+            dirSymbol = 'NE'
+        elif newDir == 90:
+            dirSymbol = 'E'
+        elif newDir > 90 and newDir < 180:
+            dirSymbol = 'SE'
+        elif newDir == 180:
+            dirSymbol = 'S'
+        elif newDir > 180 and newDir < 270:
+            dirSymbol = 'SW'
+        elif newDir == 270:
+            dirSymbol = 'W'
+        elif newDir > 270 and newDir < 360:
+            dirSymbol = 'NW'
 
         if dirSymbol == '-':
-            logger.error("Given new directory is out of range 0-360 degrees")
+            print("Error: Given new directory is out of range 0-360 degrees")
+            sys.exit(1)
 
-        fileName=os.path.basename(self.name)
-
-        boundaryFile=ParsedParameterFile(self.boundaryDict(),debug=False,boundaryDict=True)
-        bnd=boundaryFile.content
-        if type(bnd)!=list:
-            logger.error("Problem with boundary file (not a list)")
-            sys.exit()
-
-        for boundary in ['north','east','south','west']:
-            key='dir'+dirSymbol+'B'+boundary
-            boundaryType=boundaryTypes[key]
-
-            found=False
-            for val in bnd:
-                if val==boundary:
-                    found=True
-                elif found:
-                    val["type"]=boundaryType
-                    break
-
-            if not found:
-                logger.error("Boundary"+bName+"not found in"+bnd[::2])
-                sys.exit()
-        boundaryFile.writeFile()
-
-        fields=self.getFields(time)
+        fields = self.getFields(time)
         for field in fields:
-
-            fieldPath=path.join(self.name,str(time),field)
-            for boundary in ['north','east','south','west']:
-                key='dir'+dirSymbol+'B'+boundary
-                boundaryPhysType=boundaryPhysTypes[key]
+            fieldPath = path.join(self.name, str(time), field)
+            for boundary in ['north', 'east', 'south', 'west']:
+                key = 'dir' + dirSymbol + 'B' + boundary
+                boundaryPhysType = boundaryPhysTypes[key]
                 if ".gz" in field:
-                    fieldType=self.physTypeToFieldType(boundaryPhysType,field[:-3])
+                    fieldDef = self.physTypeToFieldType(
+                        boundaryPhysType, field[: -3]
+                    )
                 else:
-                    fieldType=self.physTypeToFieldType(boundaryPhysType,field)
-                self.modFieldBcType(fieldPath, boundary,fieldType)
+                    fieldDef = self.physTypeToFieldType(
+                        boundaryPhysType, field
+                    )
+                self.modFieldBcType(fieldPath, boundary, fieldDef)
 
-    def physTypeToFieldType(self,physType,fieldName):
-        if physType=="symmetryPlane":
+    def physTypeToFieldType(self, physType, fieldName):
+        if physType == "symmetryPlane":
             return "symmetryPlane"
         if "spec_" in fieldName:
             fieldName = "scalar"
 
-        fields={
-            "U": {"wall":"uniformFixedValue", "inlet": "atmBoundaryLayerInletVelocity", "outlet": "inletOutlet", "side": "zeroGradient"},
-            "p": {"wall": "zeroGradient", "inlet": "zeroGradient", "outlet": "uniformFixedValue", "side": "zeroGradient"},
-            "epsilon": {"wall": "epsilonWallFunction", "inlet": "atmBoundaryLayerInletEpsilon", "outlet": "inletOutlet", "side": "zeroGradient"},
-            "k": {"wall": "kqRWallFunction", "inlet": "atmBoundaryLayerInletK","outlet": "inletOutlet", "side": "zeroGradient"},
-            "nuTilda": {"wall": "calculated", "inlet": "calculated","outlet": "calculated","side": "calculated"},
-            "R": {"wall": "kqRWallFunction", "inlet": "calculated","outlet": "calculated","side": "calculated"},
-            "omega": {"wall": "omegaWallFunction", "inlet": "fixedValue", "outlet": "zeroGradient","side": "zeroGradient"},
-            "nut": {"wall": "nutkAtmRoughWallFunction", "inlet": "zeroGradient", "outlet": "zeroGradient","side": "zeroGradient"},
-            "scalar": {"wall": "zeroGradient", "inlet": "uniformFixedValue", "outlet": "inletOutlet","side": "zeroGradient"}
+        fields = {
+            "U": {
+                "wall": """\
+                type            uniformFixedValue;
+                uniformValue    (0 0 0);
+                value           uniform (0 0 0);""",
+
+                "inlet": """
+                type            atmBoundaryLayerInletVelocity;
+                #include        "include/ABLConditions\"""",
+
+                "outlet": """\
+                type            inletOutlet;
+                inletValue      uniform (0 0 0);
+                value           $internalField;""",
+
+                "side": "   type slip;"
+            },
+            "p": {
+                "wall": "type zeroGradient;",
+
+                "inlet": "type zeroGradient;",
+
+                "outlet": """\
+                type            uniformFixedValue;
+                uniformValue    constant $pressure;""",
+
+                "side": "   type slip;"
+            },
+            "epsilon": {
+                "wall": """\
+                type            epsilonWallFunction;
+                Cmu             0.09;
+                kappa           0.4;
+                E               9.8;
+                value           $internalField;""",
+
+                "inlet": """\
+                type            atmBoundaryLayerInletEpsilon;
+                #include        "include/ABLConditions\"""",
+
+                "outlet": """\
+                type            inletOutlet;
+                inletValue      uniform $turbulentEpsilon;
+                value           $internalField;""",
+
+                "side": "   type slip;"
+            },
+            "k": {
+                "wall": """\
+                type            kqRWallFunction;
+                value           uniform 0.0;""",
+
+                "inlet": """\
+                type            atmBoundaryLayerInletK;
+                #include        "include/ABLConditions\"""",
+
+                "outlet": """\
+                type            inletOutlet;
+                inletValue      uniform $turbulentKE;
+                value           $internalField;""",
+
+                "side": "   type slip;"
+            },
+            "nut": {
+                "wall": """\
+                type            nutkAtmRoughWallFunction;
+                z0              uniform 0.001;
+                value           uniform 0.0;""",
+
+                "inlet": """\
+                type            calculated;
+                value           uniform 0;""",
+
+                "outlet": """\
+                type            calculated;
+                value           uniform 0;""",
+
+                "side": "   type slip;"
+            },
         }
+        # "scalar": {
+        #     "wall": "zeroGradient",
+        #     "inlet": "typeuniformFixedValue",
+        #     "outlet": "inletOutlet",
+        #     "side": "type slip;"
+        # }
+
+        # "nuTilda": {
+        #     "wall": "type calculated;",
+        #     "inlet": "type calculated;",
+        #     "outlet": "type calculated;",
+        #     "side": "type calculated;",
+        # },
+        # "R": {
+        #     "wall": """\
+        #     type            kqRWallFunction;
+        #     value           uniform 0.0;""",
+        #     "inlet": "type calculated;",
+        #     "outlet": "type calculated;",
+        #     "side": "type calculated;"
+        # },
 
         if fieldName not in fields.keys():
-            self.logger.warning("Did not find bc rules for field: "+fieldName+", using default zeroGradient")
+            self.logger.warning(
+                "Did not find bc rules for field: " + fieldName +
+                ", using default zeroGradient"
+            )
             return "zeroGradient"
 
         if physType not in fields[fieldName].keys():
-            self.logger.error("Handling of boundary condition: "+physType+" not implemented")
-            sys.exit()
+            self.logger.error(
+                "Handling of boundary condition: " +
+                physType + " not implemented")
+            sys.exit(1)
 
         return fields[fieldName][physType]
 
     def readFieldBcType(self, fieldPath, patch):
-        file=ParameterFile(fieldPath)
+        file = ParameterFile(fieldPath)
         file.readFile()
-        exp=re.compile("("+patch+r"\s*?\n\s*?\{.*?type)(\s*?)(.*?)(;.*?\})",re.DOTALL)
+        exp = re.compile(
+            "(" + patch + r"\s*?\n\s*?\{.*?type)(\s*?)(.*?)(;.*?\})",
+            re.DOTALL
+        )
 
         bcMatch = exp.search(file.content)
 
-        if bcMatch==None:
-            self.logger.debug("Could not find patch: "+patch+" in file: "+file.name)
-
+        if bcMatch is None:
+            self.logger.debug(
+                "Could not find patch: " + patch + " in file: " + file.name
+            )
         try:
-            patchType=bcMatch.group(3)
+            patchType = bcMatch.group(3)
         except:
-            self.logger.error("Could not get patch type from file: "+file.name+" check the file!")
-            sys.exit()
+            self.logger.error(
+                "Could not get patch type from file: " +
+                file.name + " check the file!"
+            )
+            sys.exit(1)
         return patchType.strip()
 
-
     def modFieldBcType(self, fieldPath, patch, newBcType):
-        file=ParameterFile(fieldPath)
+        file = ParameterFile(fieldPath)
         file.readFile()
-        oldBc=self.readFieldBcType(fieldPath,patch)
-
-        fieldType=file.readParameter("class")
-        fieldName=file.readParameter("object")
-
-        if fieldType=="volVectorField":
-            valueStr=" uniform (0 0 0);"
-        elif fieldType=="volTensorField":
-            valueStr=" uniform (0 0 0 0 0 0 0 0 0);"
-        elif fieldType=="volSymmTensorField":
-            valueStr=" uniform (0 0 0 0 0 0);"
-        else:
-            if fieldName == "k":
-                valueStr = " uniform 0.1;"
-            elif fieldName == "epsilon":
-                valueStr = " uniform 0.01;"
-            else:
-                valueStr = " uniform 0;"
-
-        if oldBc=="fixedValue":
-            exp=re.compile("("+patch+r".*?type\s*?)(\w*?)(;)(.*?value.*?;)",re.DOTALL)
-        else:
-            exp=re.compile("("+patch+r"\s*?\n\s*?\{.*?type\s*?)(\w*?)(\s*?;)",re.DOTALL)
-
+        exp = re.compile(patch + r".*?\{(.*?)\}", re.DOTALL)
         file.readFile()
+        [newStr, num] = exp.subn(
+            "%s\n  {\n%s\n  }\n" % (patch, newBcType),
+            file.content
+        )
 
-        if newBcType=="fixedValue" or "WallFunction" in newBcType:
-            [newStr, num]=exp.subn(r'\1'+newBcType+r'\3'+'\n        value'+valueStr, file.content)
+        if num == 0:
+            self.logger.error(
+                "Patch: " + patch + "not found in " +
+                file.name + " could not modify bc"
+            )
+            sys.exit(1)
         else:
-            [newStr, num]=exp.subn(r'\1'+newBcType+r'\3', file.content)
-
-        if num==0:
-            self.logger.error("Patch: "+patch+"not found in "+file.name+" could not modify bc")
-            sys.exit()
-        else:
-            file.content=newStr
+            file.content = newStr
             file.writeFile()

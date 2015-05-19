@@ -12,9 +12,9 @@ from PyFoam.RunDictionary.SolutionFile import SolutionFile
 from PyFoam.RunDictionary.ParameterFile import ParameterFile
 
 #PyFoamContrib
-from PyFoamContrib.ParallelExecutionNSC import LAMMachine
-from PyFoamContrib import ConvergenceTable, FoamArchive, ControlFile, CaseHandler, ExtendedParameterFile
-from PyFoamContrib.templates.PyFoamWindRunnerCfTemplate import defaultCf
+from PyFoamSMHI.ParallelExecutionNSC import LAMMachine
+from PyFoamSMHI import ConvergenceTable, FoamArchive, ControlFile, CaseHandler, ExtendedParameterFile
+from PyFoamSMHI.templates.PyFoamWindRunnerCfTemplate import defaultCf
 
 import pdb
 

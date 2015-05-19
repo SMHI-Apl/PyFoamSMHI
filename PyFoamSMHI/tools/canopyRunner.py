@@ -12,11 +12,9 @@ from PyFoam.RunDictionary.SolutionFile import SolutionFile
 from PyFoam.RunDictionary.ParameterFile import ParameterFile
 
 #PyFoamContrib
-from PyFoamContrib.ParallelExecutionNSC import LAMMachine
-from PyFoamContrib import ConvergenceTable, FoamArchive, ControlFile, CaseHandler
-from PyFoamContrib.templates.PyFoamWindRunnerCfTemplate import defaultCf
-
-import pdb
+from PyFoamSMHI.contrib.ParallelExecutionNSC import LAMMachine
+from PyFoamSMHI.contrib import ConvergenceTable, FoamArchive, ControlFile, CaseHandler
+from PyFoamSMHI.templates.PyFoamWindRunnerCfTemplate import defaultCf
 
 usage = "usage: %prog controlFile [options] "
 version="%prog 1.0"

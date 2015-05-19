@@ -9,8 +9,8 @@ from PyFoam.Execution.UtilityRunner import UtilityRunner
 from PyFoam.RunDictionary.SolutionFile import SolutionFile
 from PyFoam.RunDictionary.ParameterFile import ParameterFile
 #PyFoamContrib
-from PyFoamContrib import FoamArchive, CaseHandler
-from PyFoamContrib.templates.PyFoamWindRunnerCfTemplate import defaultCf
+from PyFoamSMHI.contrib import FoamArchive, CaseHandler
+from PyFoamSMHI.templates.PyFoamWindRunnerCfTemplate import defaultCf
 
 
 usage = "usage: %prog [options] "

@@ -2,12 +2,12 @@
 import os, subprocess, sys
 from os import path
 from optparse import OptionParser
-from PyFoamContrib import ControlFile
+from PyFoamSMHI.contrib import ControlFile
 
 usage = "usage: %prog controlFile [options] "
 version="%prog 1.0"
 
-        
+
 def main():
     parser=OptionParser(usage= usage, version=version)
 
