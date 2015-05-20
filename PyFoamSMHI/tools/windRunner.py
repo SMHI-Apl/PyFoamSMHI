@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: us-ascii -*-
 """Utility to run wind simulations in batch mode."""
 from os import path
 import os
