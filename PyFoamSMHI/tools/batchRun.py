@@ -42,7 +42,7 @@ def main():
     CPUs = cf.findScalar("CPUs:", optional=True)
     walltime = cf.findString("walltime:", optional=False)
     mem = cf.findScalar("mem:", optional=True)
-    partition = cf.findScalar("partition:", optional=True)
+    partition = cf.findString("partition:", optional=True)
     batchScript = cf.findString("batchScript:", optional=False)
 
     if nodes is None and CPUs is None:

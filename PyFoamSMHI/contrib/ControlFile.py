@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-import re,sys,logging, codecs
+import re
+import sys
+import codecs
 from os import path
-logger=logging.getLogger('ControlFile')
+
 
 def generateCf(filename,template):
     if not path.exists(path.dirname(filename)):
@@ -59,7 +61,7 @@ class ControlFile:
             nameMatch = nameExp.search("\n"+self.content)
         
         if nameMatch==None and not optional:
-            logger.error("Could not find parameter '"+parName+"' in controlFile")
+            print("Error: Could not find parameter '"+parName+"' in controlFile")
             sys.exit()
         elif nameMatch==None and optional:
             return None
@@ -73,7 +75,7 @@ class ControlFile:
                     if optional:
                         res.append(None)
                     else:
-                        logger.error("No value given for parameter "+parName+" in template")
+                        print("Error: No value given for parameter "+parName+" in template")
                         sys.exit()
                 else:
                     res.append(nameString)
@@ -85,7 +87,7 @@ class ControlFile:
                 if optional:
                     return None
                 else:
-                    logger.error("No value given for parameter "+parName+" in template")
+                    print("Error: No value given for parameter "+parName+" in template")
                     sys.exit()
             else:
                 return nameString
@@ -94,7 +96,7 @@ class ControlFile:
         par=self.findParam(parName,optional)        
         if par==None :
             if not optional:
-                logger.error("No parameter named '"+ parName+ "' found in controlfile")
+                print("Error: No parameter named '"+ parName+ "' found in controlfile")
                 sys.exit()
             else:
                 return default
@@ -102,14 +104,14 @@ class ControlFile:
             par=int(par)
             return par
         except:
-            logger.error("Parameter named '"+ parName+ "' in controlfile should be a scalar")
+            print("Error: Parameter named '"+ parName+ "' in controlfile should be a scalar")
             sys.exit()
 
     def findFloat(self,parName,default=None,optional=False):
         par=self.findParam(parName,optional)        
         if par==None :
             if not optional:
-                logger.error("No parameter named '"+ parName+ "' found in controlfile")
+                print("Error: No parameter named '"+ parName+ "' found in controlfile")
                 sys.exit()
             else:
                 return default
@@ -117,7 +119,7 @@ class ControlFile:
             par=float(par)
             return par
         except:
-            logger.error("Parameter named '"+ parName+ "' in controlfile should be a scalar")
+            print("Error: Parameter named '"+ parName+ "' in controlfile should be a scalar")
             sys.exit()
 
 
@@ -128,7 +130,7 @@ class ControlFile:
         par=self.findParam(parName,optional)
         if par==None :
             if not optional:
-                logger.error("No parameter named '"+ parName+ "' found in controlfile")
+                print("Error: No parameter named '"+ parName+ "' found in controlfile")
                 sys.exit()
             else:
                 return default
@@ -138,14 +140,14 @@ class ControlFile:
         elif par.lower() =="false":
             return False
         else:
-            logger.error("Parameter named '"+ parName+ "' in controlfile should be a either True or False")
+            print("Error: Parameter named '"+ parName+ "' in controlfile should be a either True or False")
             sys.exit()
         
     def findString(self,parName,default=None,optional=False):
         par=self.findParam(parName,optional)
         if par==None:
             if not optional:
-                logger.error("No parameter named '"+ parName+ "' found in controlfile")
+                print("Error: No parameter named '"+ parName+ "' found in controlfile")
                 sys.exit()
             else:
                 return default
@@ -172,7 +174,7 @@ class ControlFile:
         par=self.findParam(parName,optional)
         if par==None :
             if not optional:
-                logger.error("No parameter named '"+ parName+ "' found in controlfile")
+                print("Error: No parameter named '"+ parName+ "' found in controlfile")
                 sys.exit()
             else:
                 return default
@@ -186,7 +188,7 @@ class ControlFile:
             try:
                 floats.append(float(post))
             except TypeError:
-                logger.error("Parameter: "+parName+" in controlFile should be a list of numbers")
+                print("Error: Parameter: "+parName+" in controlFile should be a list of numbers")
                 sys.exit()
         return floats
 
@@ -194,7 +196,7 @@ class ControlFile:
         par=self.findParam(parName,optional)
         if par==None :
             if not optional:
-                logger.error("No parameter named '"+ parName+ "' found in controlfile")
+                print("Error: No parameter named '"+ parName+ "' found in controlfile")
                 sys.exit()
             else:
                 return default
@@ -209,7 +211,7 @@ class ControlFile:
             try:
                 floats.append(int(post))
             except TypeError:
-                logger.error("Parameter: "+parName+" in controlFile should be a list of numbers")
+                print("Error: Parameter: "+parName+" in controlFile should be a list of numbers")
                 sys.exit()
         return floats
     
@@ -217,7 +219,7 @@ class ControlFile:
         par=self.findParam(parName,optional)
         if par==None :
             if not optional:
-                logger.error("No parameter named '"+ parName+ "' found in controlfile")
+                print("Error: No parameter named '"+ parName+ "' found in controlfile")
                 sys.exit()
             else:
                 return default
@@ -242,16 +244,16 @@ class ControlFile:
         par=self.findString(parName,default=default,optional=optional)
         if par==None :
             if not optional:
-                logger.error("No parameter named '"+parName+ "' found in controlfile")
+                print("Error: No parameter named '"+parName+ "' found in controlfile")
                 sys.exit()
             else:
                 return default
         if not path.exists(par): 
             if not optional:
-                logger.error("Parameter: '"+ parName+ "' in controlFile points out a path that does not exist")
+                print("Error: Parameter: '"+ parName+ "' in controlFile points out a path that does not exist")
                 sys.exit()
             else:
-                logger.warning("Optional parameter: '"+ parName+ "' in controlFile points out a path that does not exist")
+                print("Warning: Optional parameter: '"+ parName+ "' in controlFile points out a path that does not exist")
         return par
 
     def removeComments(self):

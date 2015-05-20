@@ -31,6 +31,7 @@ setup(
             'speciesRunner = PyFoamSMHI.tools.speciesRunner:main',
             'setWdir = PyFoamSMHI.tools.setWdir:main',
             'archiveToRuntime = PyFoamSMHI.tools.archiveToRuntime:main',
+            'batchRun = PyFoamSMHI.tools.batchRun:main',
         ],
     },
     setup_requires=['setuptools_git'],
