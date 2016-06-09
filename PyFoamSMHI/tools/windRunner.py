@@ -20,6 +20,7 @@ from PyFoamSMHI.contrib.ParallelExecutionNSC import LAMMachine
 from PyFoamSMHI.contrib import (
     ConvergenceTable, FoamArchive, ControlFile, CaseHandler
 )
+from PyFoamSMHI.contrib.utilities import generateCf
 from PyFoamSMHI.templates.PyFoamWindRunnerCfTemplate import defaultCf
 
 
@@ -32,26 +33,6 @@ def dir2vec(wdir):
     x = -1 * cos(wdir_radians)
     y = -1 * sin(wdir_radians)
     return '(%f %f 0)' % (x, y)
-
-
-def generateCf(filename):
-    if not path.exists(path.dirname(filename)):
-        print "Error, path for controlfile does not exist"
-    if path.exists(filename):
-        answer = raw_input("File already exists, replace? (y/n)")
-        if answer == "n":
-            sys.exit(0)
-        elif answer == "y":
-            fid = open(filename, "w")
-            fid.write(defaultCf)
-            fid.close()
-        else:
-            print "Invalid answer (should be y or n)"
-            sys.exit(1)
-    else:
-        fid = open(filename, "w")
-        fid.write(defaultCf)
-        fid.close()
 
 
 def main():
@@ -97,7 +78,7 @@ def main():
         rootLogger.addHandler(console)
 
     if options.controlfile is not None:
-        generateCf(path.abspath(options.controlfile))
+        generateCf(options.controlfile, defaultCf)
         print "Wrote default controlfile"
         sys.exit(0)
 
