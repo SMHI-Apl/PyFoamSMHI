@@ -9,7 +9,7 @@ from PyFoam.Execution.UtilityRunner import UtilityRunner
 from PyFoam.RunDictionary.SolutionFile import SolutionFile
 from PyFoam.RunDictionary.ParameterFile import ParameterFile
 #PyFoamContrib
-from PyFoamSMHI.contrib import FoamArchive, CaseHandler
+from PyFoamSMHI.contrib import FoamArchive, CaseHandler, FoamArchive
 from PyFoamSMHI.templates.PyFoamWindRunnerCfTemplate import defaultCf
 
 
@@ -39,9 +39,13 @@ def main():
                       action="store",dest="case",default=None,
                       help="Specifies case directory")
  
-    parser.add_option("-w", "--wdir",
+    parser.add_option("--wdir",
                       action="store",dest="wdir",default=None,
-                      help="Wind dir to change boundary to")
+                      help="Wind dir to change boundary to or restore from archive")
+
+    parser.add_option("--wspeed",
+                      action="store",dest="wspeed",default=None,
+                      help="Wind speed to restore from archive")
     
     (options, args) = parser.parse_args()
     
@@ -79,7 +83,14 @@ def main():
         
     caseName=path.basename(casePath)
     ch=CaseHandler.CaseHandler(casePath)
-    
+
+    if options.archiveDirName is not None:
+        if options.wspeed is None or options.wdir is None:
+            
+        
+        flowArchive = FoamArchive.FoamArchive(casePath, options.archiveDirName)
+        dirName = "wspeed_" + str(wspeed) + "_wdir_"+str(wdir)
+        
     wdir=float(options.wdir)
     ch.clearResults()
     logger.info("Modifying bc:s...")  

@@ -192,7 +192,7 @@ class CaseHandler(SolutionDirectory):
                 inletValue      uniform (0 0 0);
                 value           $internalField;""",
 
-                "side": "   type slip;"
+                "side": "   type zeroGradient;"
             },
             "p": {
                 "wall": "type zeroGradient;",
@@ -203,7 +203,7 @@ class CaseHandler(SolutionDirectory):
                 type            uniformFixedValue;
                 uniformValue    constant $pressure;""",
 
-                "side": "   type slip;"
+                "side": "   type zeroGradient;"
             },
             "epsilon": {
                 "wall": """\
@@ -222,7 +222,7 @@ class CaseHandler(SolutionDirectory):
                 inletValue      uniform $turbulentEpsilon;
                 value           $internalField;""",
 
-                "side": "   type slip;"
+                "side": "   type zeroGradient;"
             },
             "k": {
                 "wall": """\
@@ -238,7 +238,7 @@ class CaseHandler(SolutionDirectory):
                 inletValue      uniform $turbulentKE;
                 value           $internalField;""",
 
-                "side": "   type slip;"
+                "side": "   type zeroGradient;"
             },
             "nut": {
                 "wall": """\
@@ -254,14 +254,14 @@ class CaseHandler(SolutionDirectory):
                 type            calculated;
                 value           uniform 0;""",
 
-                "side": "   type slip;"
+                "side": "   type zeroGradient;"
             },
         }
         # "scalar": {
         #     "wall": "zeroGradient",
         #     "inlet": "typeuniformFixedValue",
         #     "outlet": "inletOutlet",
-        #     "side": "type slip;"
+        #     "side": "type zeroGradient;"
         # }
 
         # "nuTilda": {
@@ -284,7 +284,7 @@ class CaseHandler(SolutionDirectory):
                 "Did not find bc rules for field: " + fieldName +
                 ", using default zeroGradient"
             )
-            return "zeroGradient"
+            return "   type zeroGradient;"
 
         if physType not in fields[fieldName].keys():
             self.logger.error(
