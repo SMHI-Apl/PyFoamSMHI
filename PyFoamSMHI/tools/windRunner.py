@@ -212,6 +212,15 @@ def main():
 
             dirName = "wspeed_" + str(wspeed) + "_wdir_"+str(wdir)
             logger.info("restoreArchived = "+str(restoreArchived))
+            if flowArchive.inArchive(dirName=dirName) and not restoreArchived:
+                logger.info('Results already in archive, moving on...')
+                casesRun += 1
+                casesLeft -= 1
+                timeCase = time.time() - timeInit
+                timeSpent += timeCase
+                timeLeft = casesLeft * timeCase
+                timeEstimated = time.localtime(time.time() + timeLeft)
+                continue               
 
             logger.info("...Modifying bc:s")
             ch.modWindDir(ch.initialDir(), wdir)
@@ -248,7 +257,7 @@ def main():
                flowArchive.inArchive(dirName=dirName):
                 logger.info("Restoring archived flow fields")
                 flowArchive.restore(
-                    dirName, fieldsToArchive, ch.initialDir()
+                    dirName, ch.initialDir(), fieldsToArchive
                 )
                 for filename in fieldsToArchive:
                     flowArchive.getFile(
