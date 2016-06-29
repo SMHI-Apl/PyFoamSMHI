@@ -1,101 +1,95 @@
 #!/usr/bin/env python
+"""Set bc to represent given wind direction, or restore fields from archive."""
+
 #Python standard modules
 from os import path
-import os, glob, time,sys, logging
-from optparse import OptionParser
+import os
+import glob
+import time
+import sys
+import logging
+import argparse
 
 #PyFoam modules
 from PyFoam.Execution.UtilityRunner import UtilityRunner
 from PyFoam.RunDictionary.SolutionFile import SolutionFile
 from PyFoam.RunDictionary.ParameterFile import ParameterFile
+
 #PyFoamContrib
 from PyFoamSMHI.contrib import FoamArchive, CaseHandler, FoamArchive
 from PyFoamSMHI.templates.PyFoamWindRunnerCfTemplate import defaultCf
+from PyFoamSMHI.contrib.utilities import (
+    VerboseAction,
+    LogFileAction
+)
 
-
-usage = "usage: %prog [options] "
-version="%prog 1.0"
-
+log = logging.getLogger(__name__)
 
 def main():
-    parser=OptionParser(usage= usage, version=version)
-    parser.add_option("-q", "--quiet",
-                      action="store_true", dest="quiet", default=False,
-                      help="Only print warnings and errors")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        '-v',
+        action=VerboseAction, dest='loglevel', default=logging.INFO,
+        help='increase verbosity in terminal',
+    )
     
-    parser.add_option("-a", "--archiveDir",
-                      action="store", dest="archiveDir", default=None,
-                      help="Path to archive directory to fetch results from")
-    
-    parser.add_option("-l", "--logfile",
-                      action="store",dest="logfile",default=None,
-                      help="Writes output to logfile")
-    
-    parser.add_option("-d", "--debug",
-                      action="store_true",dest="debug",default=False,
-                      help="Writes output to logfile")
-    
-    parser.add_option("-c", "--case",
-                      action="store",dest="case",default=None,
-                      help="Specifies case directory")
+    parser.add_argument(
+        '-l', metavar='logfile',
+        action=LogFileAction, dest='logfile',
+        help='write verbose output to logfile',
+    )
+
+    parser.add_argument(
+        "-a", "--archiveDir",
+        action="store", dest="archiveDir", default=None,
+        help="Path to archive directory to fetch results from"
+    )
+
+    parser.add_argument(
+        "-c", "--case",
+        action="store",dest="case",default=None,
+        help="Specifies case directory"
+    )
  
-    parser.add_option("--wdir",
-                      action="store",dest="wdir",default=None,
-                      help="Wind dir to change boundary to or restore from archive")
+    parser.add_argument(
+        "--wdir",
+        action="store",dest="wdir",default=None, type=float,
+        help="Wind dir to change boundary to or restore from archive"
+    )
 
-    parser.add_option("--wspeed",
-                      action="store",dest="wspeed",default=None,
-                      help="Wind speed to restore from archive")
-    
-    (options, args) = parser.parse_args()
-    
-    rootLogger=logging.getLogger('')
-    logger=logging.getLogger('setWdir')
-    reportLevel=logging.INFO
-    if options.quiet:
-        reportLevel=logging.WARNING
-    if options.debug:
-        reportLevel=logging.DEBUG
-    rootLogger.setLevel(reportLevel)
+    parser.add_argument(
+        "--wspeed",
+        action="store",dest="wspeed",default=None, type=float,
+        help="Wind speed to restore from archive"
+    )
 
-    if options.logfile==None:
-        console=logging.StreamHandler()
-        console.setLevel(reportLevel)
-        formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
-        console.setFormatter(formatter)    
-        rootLogger.addHandler(console)
-            
-    if options.logfile!=None:
-        logFileName=path.abspath(options.logfile)
-        if not path.exists(path.dirname(logFileName)):
-            print "Bad argument, directory for logfile does not exist"
-            sys.exit()
-        logfile=logging.FileHandler(logFileName,"w")
-        logfile.setLevel(reportLevel)
-        formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
-        logfile.setFormatter(formatter)    
-        rootLogger.addHandler(logfile)
-            
-    if options.case!=None:
-        casePath=path.abspath(options.case)
+    args = parser.parse_args()
+                
+    if args.case!=None:
+        casePath=path.abspath(args.case)
     else:
         casePath=os.getcwd()
         
     caseName=path.basename(casePath)
     ch=CaseHandler.CaseHandler(casePath)
 
-    if options.archiveDirName is not None:
-        if options.wspeed is None or options.wdir is None:
-            
-        
-        flowArchive = FoamArchive.FoamArchive(casePath, options.archiveDirName)
-        dirName = "wspeed_" + str(wspeed) + "_wdir_"+str(wdir)
-        
-    wdir=float(options.wdir)
     ch.clearResults()
-    logger.info("Modifying bc:s...")  
-    ch.modWindDir(ch.initialDir(),wdir)
-    logger.info("bc:s modified!")
+    log.info("Modifying bc:s...")  
+    ch.modWindDir(ch.initialDir(),args.wdir)
+    log.info("bc:s modified!")
+
+    if args.archiveDir is not None:
+        if args.wspeed is None or args.wdir is None:
+            log.error('Must specify both -wdir and -wspeed to restore fields from archive')
+            sys.exit(1)            
+        
+        flowArchive = FoamArchive.FoamArchive(casePath, args.archiveDir)
+        dirName = "wspeed_%3.1f_wdir_%3.1f" % (args.wspeed, args.wdir)
+        if not flowArchive.inArchive(dirName=dirName):
+            log.error("Missing flow files in dir: %s"  % dirName)
+        else:
+            flowArchive.restore(dirName, ch.initialDir())
+            
     
 if __name__ == "__main__":
     main()
