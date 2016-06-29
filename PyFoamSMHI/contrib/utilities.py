@@ -25,7 +25,29 @@ def generateCf(filename, template):
         fid.write(template)
         fid.close()
 
+        
+def create_terminal_handler(loglevel=logging.INFO, prog=None):
+    """Configure a log handler for the terminal."""
+    if prog is None:
+        prog = path.basename(sys.argv[0])
+        streamhandler = logging.StreamHandler()
+        streamhandler.setLevel(loglevel)
+        format = ': '.join((prog, '%(levelname)s', '%(message)s'))
+        streamformatter = logging.Formatter(format)
+        streamhandler.setFormatter(streamformatter)
+        return streamhandler
 
+    
+def create_file_handler(filename, loglevel=logging.DEBUG):
+    """Configure a log handler for *filename*."""
+    filehandler = logging.FileHandler(filename, mode='w', encoding='utf-8')
+    filehandler.setLevel(logging.DEBUG)
+    fmt = '%(asctime)s %(levelname)s %(name)s.%(funcName)s: %(message)s'
+    fileformatter = logging.Formatter(fmt)
+    filehandler.setFormatter(fileformatter)
+    return filehandler
+
+    
 class VerboseAction(argparse.Action):
 
     """Argparse action to handle terminal verbosity level."""
@@ -34,7 +56,7 @@ class VerboseAction(argparse.Action):
                  default=logging.WARNING, help=None):
         baselogger = logging.getLogger()
         baselogger.setLevel(logging.DEBUG)
-        self._loghandler = logging.create_terminal_handler(default)
+        self._loghandler = create_terminal_handler(default)
         baselogger.addHandler(self._loghandler)
         super(VerboseAction, self).__init__(
             option_strings, dest,
@@ -55,5 +77,5 @@ class LogFileAction(argparse.Action):
 
     def __call__(self, parser, namespace, values, option_string=None):
         baselogger = logging.getLogger()
-        baselogger.addHandler(logging.create_file_handler(values))
+        baselogger.addHandler(create_file_handler(values))
         setattr(namespace, self.dest, values)
