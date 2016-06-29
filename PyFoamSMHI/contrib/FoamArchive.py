@@ -1,5 +1,5 @@
 import os, sys, logging
-from os import path, popen4
+from os import path, popen4, listdir
 
 logger = logging.getLogger('foamArchive')
 
@@ -80,15 +80,15 @@ class FoamArchive:
         if dirName is None and filename is None:
             logger.warning("No file or directory given as parameter for inArchive function")
             return True
-        testPath = self.path
+        
         if dirName is not None and filename is None:
-            testPath = path.join(testPath, dirName)
-        if filename is not None:
-            testPath = path.join(testPath, filename)
-        if path.exists(testPath):
-           return True
+            return path.exists(path.join(self.path, dirName))
+        elif filename is not None and dirName is None:
+            return path.exists(path.join(self.path, filename))
+        elif filename is not None and dirName is not None:
+            return path.exists(path.join(self.path, dirName, filename))
         else:
-           return False
+           raise ValueError('Must specify at least one of dirName and fileName')
 
     def filesInArchive(self, dirName, fileNames):
         """Test if a file, directory or a file within a directory exist in the archive
@@ -139,14 +139,20 @@ class FoamArchive:
 
         return tmp
 
-    def restore(self, dirName, fileNames, destinationDir):
+    def restore(self, dirName, destinationDir, fileNames=None):
         """Copies the given files from archive to a given directory
         @param dirName: name of directory in archive
         @param fileNames: list of names for files to be copied
         @param destinationDir: path to destination directory
         """
-        if self.filesInArchive(dirName, fileNames):
+        if fileNames is not None:
             for fileName in fileNames:
-                outFile = path.join(destinationDir,fileName)
-                self.getFile(outFile, fileName, dirName)
-
+                if not self.filesInArchive(dirName, [fileName]):
+                    raise ValueError('File %s not found in archive %s' % (
+                        fileName, path.join(self.path, dirName))
+                    )
+        else:
+            fileNames = listdir(path.join(self.path, dirName))
+        for fileName in fileNames:
+            outFile = path.join(destinationDir,fileName)
+            self.getFile(outFile, fileName, dirName)
