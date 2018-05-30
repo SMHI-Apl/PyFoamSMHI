@@ -76,7 +76,7 @@ def main():
 
     runStr = "running: "
     for x in execList:
-        print x
+        print(x)
         runStr += " "+x
     print runStr
     subprocess.call(execList)
