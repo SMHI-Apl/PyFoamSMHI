@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Things that are needed for convenient parallel Execution"""
 
-import commands
+import subprocess
 from PyFoam.Basics.Utilities import Utilities
 from PyFoam.FoamInformation import foamMPI
 from PyFoam.Error import error, warning, debug
@@ -92,7 +92,7 @@ class LAMMachine(Utilities):
 
         progname = argv[0]
         if expandApplication:
-            stat, progname = commands.getstatusoutput('which '+progname)
+            stat, progname = subprocess.getstatusoutput('which '+progname)
             if stat:
                 progname = argv[0]
                 warning(

@@ -1,5 +1,6 @@
 import os, sys, logging
-from os import path, popen4, listdir
+import subprocess
+from os import path, listdir
 
 logger = logging.getLogger('foamArchive')
 
@@ -134,10 +135,15 @@ class FoamArchive:
         @return: A list with all the output-lines of the execution"""
         #        print cmd
 
-        rein, raus = popen4(cmd)
-        tmp = raus.readlines()
+        p = subprocess.Popen(
+            cmd, shell=True,
+            stdin=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True
+        )
+        if p.stdout is not None:
+            return p.stdout.readlines()
+        else:
+            return None
 
-        return tmp
 
     def restore(self, dirName, destinationDir, fileNames=None):
         """Copies the given files from archive to a given directory

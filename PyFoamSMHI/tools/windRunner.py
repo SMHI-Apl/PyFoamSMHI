@@ -79,13 +79,13 @@ def main():
 
     if options.controlfile is not None:
         generateCf(options.controlfile, defaultCf)
-        print "Wrote default controlfile"
+        print("Wrote default controlfile")
         sys.exit(0)
 
     if options.logfile is not None:
         logFileName = path.abspath(options.logfile)
         if not path.exists(path.dirname(logFileName)):
-            print "Bad argument, directory for logfile does not exist"
+            print("Bad argument, directory for logfile does not exist")
             sys.exit(1)
         logfile = logging.FileHandler(logFileName, "w")
         logfile.setLevel(reportLevel)
@@ -178,7 +178,7 @@ def main():
     controlDict.replaceParameter("stopAt", "nextWrite")
 
     timeLeft = iterations * nruns * 20
-    timeSpent = 05
+    timeSpent = 0
     timeCase = iterations * 20
     timeEstimated = time.localtime(time.time() + timeLeft)
     casesRun = 0
@@ -237,6 +237,7 @@ def main():
                 "z0",
                 'uniform %f' % z0Dict[wdir]
             )
+            import pdb;pdb.set_trace()
             for initCmd in initCmds:
                 initUtil = UtilityRunner(
                     argv=[initCmd, "-case", casePath],
@@ -292,8 +293,14 @@ def main():
                 logger.info("Serial Run chosen!")
 
             logger.info("...Running solver for wind field")
-            windFoamSolver = ConvergenceRunner(
-                StandardLogAnalyzer(),
+            # windFoamSolver = ConvergenceRunner(
+            #     StandardLogAnalyzer(),
+            #     argv=[solver, "-case", casePath],
+            #     silent=True,
+            #     lam=Lam,
+            #     logname=solver
+            # )
+            windFoamSolver = UtilityRunner(
                 argv=[solver, "-case", casePath],
                 silent=True,
                 lam=Lam,

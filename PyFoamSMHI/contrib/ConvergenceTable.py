@@ -21,7 +21,7 @@ class ConvergenceTable:
 #            probeDir=os.path.join(proc,"probes")
 #            if os.path.exists(probeDir):
 #                probeDirs.append(probeDir)
-        print str(probeDirs)
+        print(str(probeDirs))
         records={}
         for pdir in probeDirs:
             times=glob.glob(os.path.join(pdir,"*"))
@@ -39,7 +39,7 @@ class ConvergenceTable:
                     lines=pf.readlines()
                     pf.close()
                 except:
-                    print "Could not read probe file"
+                    print("Could not read probe file")
                     sys.exit("Could not read probe file")
                 nprobes=len(lines[0].split()[2:])
 
@@ -84,7 +84,7 @@ class ConvergenceTable:
                 lines=pf.readlines()
                 pf.close()
             except:
-                print "Could not read residual file"
+                print("Could not read residual file")
                 sys.exit("Could not read residual file")
 
             record=[]
@@ -123,7 +123,7 @@ class ConvergenceTable:
                     fid.write(run+"\t")
                 fid.write(runKeys[-1]+"\n")
             except:
-                print "Could not write probe table"
+                print("Could not write probe table")
                 sys.exit("Could not write probe table")
 
             data=[]
@@ -170,7 +170,7 @@ class ConvergenceTable:
                     fid.write(run+"\t")
                 fid.write(runKeys[-1]+"\n")
             except:
-                print "Could not write residual table"
+                print("Could not write residual table")
                 sys.exit("Could not write residual table")
 
             data=[]

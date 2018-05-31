@@ -2,7 +2,8 @@ import sys
 import re
 import os
 import logging
-from os import path, popen4
+import subprocess
+from os import path
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from PyFoam.RunDictionary.ParameterFile import ParameterFile
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
@@ -40,9 +41,16 @@ class CaseHandler(SolutionDirectory):
         """Execute the command cmd
         Currently no error-handling is done
         @return: A list with all the output-lines of the execution"""
-        rein, raus = popen4(cmd)
-        tmp = raus.readlines()
-        return tmp
+
+        proc = subprocess.Popen(
+            cmd, shell=True,
+            stdin=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True
+        )
+        proc.wait()
+        if proc.stdout is not None:
+            return proc.stdout.readlines()
+        else:
+            return None
 
     def backUpInitialFields(self):
         bgPath = path.join(self.name, "backUpInitialFields")

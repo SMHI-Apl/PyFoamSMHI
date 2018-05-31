@@ -8,7 +8,7 @@ import argparse
 
 def generateCf(filename, template):
     if not path.exists(path.dirname(filename)):
-        print "Error, path for controlfile does not exist"
+        print("Error, path for controlfile does not exist")
     if path.exists(filename):
         answer = raw_input("File already exists, replace? (y/n)")
         if answer == "n":
@@ -18,7 +18,7 @@ def generateCf(filename, template):
             fid.write(template)
             fid.close()
         else:
-            print "Invalid answer (should be y or n)"
+            print("Invalid answer (should be y or n)")
             sys.exit(1)
     else:
         fid = open(filename, "w")
