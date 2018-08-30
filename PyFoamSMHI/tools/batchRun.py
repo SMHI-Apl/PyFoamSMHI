@@ -78,7 +78,7 @@ def main():
     for x in execList:
         print(x)
         runStr += " "+x
-    print runStr
+    print(runStr)
     subprocess.call(execList)
 
 if __name__ == "__main__":

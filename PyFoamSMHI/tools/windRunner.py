@@ -8,6 +8,7 @@ import sys
 import logging
 from math import cos, sin
 from optparse import OptionParser
+import shutil
 
 # PyFoam modules
 from PyFoam.Execution.ConvergenceRunner import ConvergenceRunner
@@ -106,8 +107,15 @@ def main():
         casePath = os.getcwd()
 
     caseName = path.basename(casePath)
-    ch = CaseHandler.CaseHandler(casePath)
 
+    templateDir = cf.findString('templateDir:', optional=True)
+    ch = CaseHandler.CaseHandler(casePath, bkpdir=templateDir)
+
+    # if a template directory is provided
+    # the initial directory is cloned from this before start
+    if templateDir is not None:
+        ch.restoreInitialFields()
+    
     wspeeds = cf.findScalarList(
         "wspeeds:", optional=False
     )
@@ -123,7 +131,7 @@ def main():
         z0Dict[wdir] = inlet_z0[i]
 
     fieldsToArchive = cf.findStringList(
-        "fieldsToArchive:", optional=False
+        "fieldsToArchive:", optional=True, default=[]
     )
     archiveDirName = cf.findString(
         "flowArchiveDirName:", optional=False
@@ -139,7 +147,8 @@ def main():
         nprocesses = int(CPUs)
     # -----------------------------------
     solver = cf.findString("solver:", default="windFoam")
-    initCmds = cf.findStringList("initialize:", default=["setLanduse"])
+    initCmds = cf.findStringList("initialize:", optional=True, default=[])
+    functionObjects = cf.findStringList("functionObjects:", default=[])
     flowArchive = FoamArchive.FoamArchive(casePath, archiveDirName)
     nwdir = len(wdirs)
     convTable = ConvergenceTable.ConvergenceTable(casePath)
@@ -184,7 +193,6 @@ def main():
     casesRun = 0
     casesLeft = nruns
     ch.backUpInitialFields()
-    logger.info("Backup made of initial fields")
     for wspeed in wspeeds:
         for wdir in wdirs:
             timeInit = time.time()
@@ -237,23 +245,7 @@ def main():
                 "z0",
                 'uniform %f' % z0Dict[wdir]
             )
-            import pdb;pdb.set_trace()
-            for initCmd in initCmds:
-                initUtil = UtilityRunner(
-                    argv=[initCmd, "-case", casePath],
-                    silent=True,
-                    logname=initCmd
-                )
-                initUtil.start()
-                if initUtil.runOK():
-                    logger.info(
-                        "Successfully finished: %s" % initCmd
-                    )
-                else:
-                    logger.error(
-                        "Error when running: %s" % initCmd
-                    )
-                    sys.exit(1)
+            
             if restoreArchived and \
                flowArchive.inArchive(dirName=dirName):
                 logger.info("Restoring archived flow fields")
@@ -269,11 +261,11 @@ def main():
 
             if nprocesses > 1:
                 if Lam.machineOK():
-                    decomposeCmd = "decomposePar"
                     decomposeUtil = UtilityRunner(
-                        argv=[decomposeCmd, "-case", casePath],
+                        argv=['redistributePar', "-case", casePath, '-decompose'],
                         silent=True,
-                        logname="decomposePar"
+                        lam=Lam,
+                        logname="decompose"
                     )
                     logger.info(
                         "...Decomposing case to run on" +
@@ -292,14 +284,30 @@ def main():
                 Lam = None
                 logger.info("Serial Run chosen!")
 
+
+            # run initialisation in parallel
+            if not (restoreArchived and \
+               flowArchive.inArchive(dirName=dirName)):
+                for initCmd in initCmds:
+                    initUtil = UtilityRunner(
+                        argv=[initCmd, "-case", casePath],
+                        silent=True,
+                        lam=Lam,
+                        logname=initCmd
+                    )
+                    initUtil.start()
+                    if initUtil.runOK():
+                        logger.info(
+                            "Successfully finished: %s" % initCmd
+                        )
+                    else:
+                        logger.error(
+                            "Error when running: %s" % initCmd
+                        )
+                        sys.exit(1)
+
+                
             logger.info("...Running solver for wind field")
-            # windFoamSolver = ConvergenceRunner(
-            #     StandardLogAnalyzer(),
-            #     argv=[solver, "-case", casePath],
-            #     silent=True,
-            #     lam=Lam,
-            #     logname=solver
-            # )
             windFoamSolver = UtilityRunner(
                 argv=[solver, "-case", casePath],
                 silent=True,
@@ -313,23 +321,42 @@ def main():
                 logger.error("Error while running solver")
                 sys.exit()
 
-            if nprocesses > 1:
-                logger.info("Reconstructing decomposed case...")
-                reconstructCmd = "reconstructPar"
-                reconstructUtil = UtilityRunner(
-                    argv=[reconstructCmd, "-latestTime", "-case", casePath],
+
+            if len(functionObjects) > 0:
+                funcList = "'(" + ' '.join(functionObjects) + ")'"
+                postUtil = UtilityRunner(
+                    argv=[solver, "-case", casePath, '-latestTime', '-postProcess', '-funcs', funcList],
                     silent=True,
-                    logname="reconstrucPar")
+                    lam=Lam,
+                    logname='functionObjects'
+                )
+
+                postUtil.start()
+                if postUtil.runOK():
+                    logger.info(
+                        "Successfully executed function objects: %s" % ' '.join(functionObjects)
+                    )
+                else:
+                    logger.error(
+                        "Error when executing function objects: %s" % ' '.join(functionObjects)
+                    )
+                    sys.exit(1)
+
+            if nprocesses > 1 and len(fieldsToArchive) > 0:
+                logger.info("Reconstructing decomposed case...")
+                reconstructUtil = UtilityRunner(
+                    argv=['redistributePar', "-case", casePath, '-reconstruct', "-latestTime"],
+                    lam=Lam,
+                    silent=True,
+                    logname="reconstruct")
                 reconstructUtil.start()
                 if reconstructUtil.runOK():
-                    logger.info("recunstruction ready!")
+                    logger.info("reconstruction ready!")
                 else:
                     logger.error("Error while running recontructPar")
                     sys.exit(1)
-
-                logger.info("Removing decomposed mesh")
-                ch.execute("rm -r " + os.path.join(casePath, "processor*"))
-                logger.info("Removed decomposed mesh!")
+            else:
+                logger.info('No fields to be archived')
 
             convTable.addResidual(
                 "wd_" + str(wdir) + "_ws_" + str(wspeed),
@@ -375,19 +402,67 @@ def main():
                 casesRun + 1
             )
 
-            logger.info(
-                "Archiving results from directory: %s" % ch.latestDir()
-            )
-            # save latest concentration result files
+            logger.info('Archiving results')
+
+            # archive latest concentration result files
             solFiles = [file for file in os.listdir(ch.latestDir())
                         if file in filesToArchive]
+            dirName = "wspeed_" + str(wspeed) + "_wdir_" + str(wdir)
             for filename in solFiles:
-                dirName = "wspeed_" + str(wspeed) + "_wdir_" + str(wdir)
                 flowArchive.addFile(
                     path.join(ch.latestDir(), filename),
                     dirName=dirName
                 )
 
+            # archive the latest function objects outputs
+            for functionObject in functionObjects:
+
+                if nprocesses > 1:
+                    functionObjectDir = path.join(
+                        casePath, 'postProcessing',
+                        functionObject, ch.getParallelTimes()[-1]
+                    )
+                else:
+                    functionObjectDir = path.join(
+                        casePath, 'postProcessing',
+                        functionObject, ch.getTimes()[-1]
+                    )
+
+                if not path.exists(functionObjectDir):
+                    # TODO, should find last modified file...
+                    # checking in first function object time directory instead
+                    functionObjectDir = path.join(
+                        casePath, 'postProcessing',
+                        functionObject, ch.getTimes()[0]
+                    )
+
+                if not path.exists(functionObjectDir):
+                                    
+                    logger.warning(
+                        'Directory %s not found, ' % functionObjectDir +
+                        'could not archive result from ' +
+                        'functionObject %s' % functionObject 
+                    )
+                else:
+                    import pdb;pdb.set_trace()
+                    functionObjectFiles = [
+                        f for f in os.listdir(functionObjectDir)
+                    ]
+                    for filename in functionObjectFiles:
+                        destDir = path.join(
+                            flowArchive.path, dirName, 'postProcessing'
+                        )
+                        flowArchive.addFile(
+                            path.join(functionObjectDir, filename),
+                            dirName=destDir
+                        )
+                    function_objects_log = path.join(casePath, 'functionObjects.logfile')
+                    if path.exists(function_objects_log):
+                        flowArchive.addFile(
+                            function_objects_log,
+                            dirName=destDir
+                        )
+                    
             logger.info(
                 "Finished wdir: " + str(wdir) + " wspeed: " +
                 str(wspeed) + "Last iter = " + ch.getLast()
@@ -406,9 +481,10 @@ def main():
                 % (" ".join(ch.getTimes()))
             )
             ch.restoreInitialFields()
-            logger.info("Restored initital fields from backup copy")
+            logger.info("Restored initital fields from backup copy or template")
             # restoring windData dictionary to original state
             ABLConditions.purgeFile()
+            logger.info('Writing convergence table')
             convTable.writeProbes()
             convTable.writeResiduals()
             logger.info(

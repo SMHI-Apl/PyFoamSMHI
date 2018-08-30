@@ -32,7 +32,7 @@ class FoamArchive:
         if dirName!=None:
             dirPath = path.join(self.path, dirName)
             if not path.exists(dirPath):
-                self.execute("mkdir " + dirPath)
+                os.makedirs(dirPath)
         else:
             dirPath = self.path
         resultPath = path.join(dirPath, path.basename(inFilePath))

@@ -11,10 +11,11 @@ from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 
 class CaseHandler(SolutionDirectory):
 
-    def __init__(self, dirPath):
+    def __init__(self, dirPath, bkpdir=None):
         self.logger = logging.getLogger('BcModifier')
         self.machinesFile = None
         SolutionDirectory.__init__(self, dirPath)
+        self.bkpdir = path.join(self.name, bkpdir or 'backupInitialDir')
 
     def clearResults(self, after=None, before=None):
         """remove all time-directories after/before a certain time. If no time is
@@ -53,18 +54,16 @@ class CaseHandler(SolutionDirectory):
             return None
 
     def backUpInitialFields(self):
-        bgPath = path.join(self.name, "backUpInitialFields")
-        if not path.exists(bgPath):
-            os.mkdir(bgPath)
-        self.execute(
-            "cp " +
-            path.join(self.initialDir(), "*[^.ba]") +
-            " " + bgPath + "/"
-        )
+        if not path.exists(self.bkpdir):
+            os.mkdir(self.bkpdir)
+            self.execute(
+                "cp -r " +
+                path.join(self.initialDir(), "*[^.ba]") +
+                " " + self.bkpdir + "/"
+            )
 
     def restoreInitialFields(self):
-        bgPath = path.join(self.name, "backUpInitialFields")
-        if not os.path.exists(bgPath):
+        if not os.path.exists(self.bkpdir):
             print(
                 "Cannot restore initial fields, " +
                 "backup directory does not exist"
@@ -72,15 +71,12 @@ class CaseHandler(SolutionDirectory):
             sys.exit(1)
         else:
             try:
-                # self.execute("rm -r "+self.initialDir())
-                if not os.path.exists(self.initialDir()):
-                    self.execute("mkdir "+self.initialDir())
+                self.execute("rm -r " + path.join(self.initialDir(), '*'))
+                # self.execute("mkdir "+self.initialDir())
                 self.execute(
-                    "cp " + path.join(bgPath, "*") +
+                    "cp -r " + path.join(self.bkpdir, "*") +
                     " " + self.initialDir() + "/"
                 )
-
-                # self.execute("cp "+path.join(bgPath,"boundary")+" "+path.join(case.constantDir(),"polyMesh","boundary"))
             except:
                 print(
                     "Warning: could not restore initial fields, skipping"
@@ -328,7 +324,11 @@ class CaseHandler(SolutionDirectory):
 
     def modFieldBcType(self, fieldPath, patch, newBcType):
         file = ParameterFile(fieldPath)
-        file.readFile()
+        try:
+            file.readFile()
+        except UnicodeDecodeError:
+            self.logger.error('Error reading file: %s, check for bad files in the inital directory' % fieldPath)
+            sys.exit(1)
         exp = re.compile(patch + r".*?\{(.*?)\}", re.DOTALL)
         file.readFile()
         [newStr, num] = exp.subn(
