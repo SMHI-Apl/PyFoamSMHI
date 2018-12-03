@@ -403,11 +403,19 @@ def main():
             )
 
             logger.info('Archiving results')
+            dirName = "wspeed_" + str(wspeed) + "_wdir_" + str(wdir)
 
+            # archive logfiles
+            logfileName = solver + '.logfile'
+            flowArchive.addFile(
+                path.join(casePath, logfileName),
+                dirName=dirName
+            )
+            
             # archive latest concentration result files
             solFiles = [file for file in os.listdir(ch.latestDir())
                         if file in filesToArchive]
-            dirName = "wspeed_" + str(wspeed) + "_wdir_" + str(wdir)
+
             for filename in solFiles:
                 flowArchive.addFile(
                     path.join(ch.latestDir(), filename),
@@ -415,7 +423,7 @@ def main():
                 )
 
             # archive the latest function objects outputs
-            for functionObject in functionObjects:
+            for functionObject in functionObjects + ['residuals', 'probes']:
 
                 if nprocesses > 1:
                     functionObjectDir = path.join(
@@ -444,7 +452,6 @@ def main():
                         'functionObject %s' % functionObject 
                     )
                 else:
-                    import pdb;pdb.set_trace()
                     functionObjectFiles = [
                         f for f in os.listdir(functionObjectDir)
                     ]

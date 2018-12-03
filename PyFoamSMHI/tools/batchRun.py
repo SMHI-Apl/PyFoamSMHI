@@ -40,8 +40,9 @@ def main():
     jobname = cf.findString("jobname:", optional=False)
     nodes = cf.findScalar("nodes:", optional=True)
     CPUs = cf.findScalar("CPUs:", optional=True)
+    fat_nodes = cf.findBoolean("fat:", optional=True, default=False)
     walltime = cf.findString("walltime:", optional=False)
-    mem = cf.findScalar("mem:", optional=True)
+    mem = cf.findScalar("mem-per-cpu:", optional=True)
     partition = cf.findString("partition:", optional=True)
     batchScript = cf.findString("batchScript:", optional=False)
 
@@ -56,8 +57,11 @@ def main():
         execList.append("-n")
         execList.append(str(int(CPUs)))
     if mem is not None:
-        execList.append("--mem")
+        execList.append("--mem-per-cpu")
         execList.append(str(int(mem)))
+    if fat_nodes:
+        execList.append('-C')
+        execList.append('fat')
     if partition is not None:
         execList.append('-A')
         execList.append(partition)

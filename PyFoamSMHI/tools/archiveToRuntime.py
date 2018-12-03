@@ -52,11 +52,11 @@ def main():
     archiveDir=path.abspath(options.archive)
     dest=path.abspath(options.dest)
     if not path.exists(archiveDir):
-        print "Archive directory does not exist"
+        print("Archive directory does not exist")
         sys.exit()
 
     if not path.exists(dest):
-        print "Destination directory does not exist"
+        print("Destination directory does not exist")
         sys.exit()
 
     #pdb.set_trace()
